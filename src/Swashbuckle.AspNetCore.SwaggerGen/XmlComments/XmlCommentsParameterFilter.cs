@@ -6,11 +6,16 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public class XmlCommentsParameterFilter : IParameterFilter
     {
-        private XPathNavigator _xmlNavigator;
+        private readonly Dictionary<string, XPathNavigator> _docMembers;
 
         public XmlCommentsParameterFilter(XPathDocument xmlDoc)
         {
-            _xmlNavigator = xmlDoc.CreateNavigator();
+            _docMembers = new Dictionary<string, XPathNavigator>();
+            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
+            {
+                var memberName = memberNode.GetAttribute("name", "");
+                _docMembers[memberName] = memberNode;
+            }
         }
 
         public void Apply(OpenApiParameter parameter, ParameterFilterContext context)
@@ -28,7 +33,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private void ApplyPropertyTags(OpenApiParameter parameter, ParameterFilterContext context)
         {
             var propertyMemberName = XmlCommentsNodeNameHelper.GetMemberNameForFieldOrProperty(context.PropertyInfo);
-            var propertyNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{propertyMemberName}']");
+
+            if (!_docMembers.TryGetValue(propertyMemberName, out var propertyNode)) return;
 
             if (propertyNode == null) return;
 
@@ -61,8 +67,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             if (targetMethod == null) return;
 
             var methodMemberName = XmlCommentsNodeNameHelper.GetMemberNameForMethod(targetMethod);
-            var paramNode = _xmlNavigator.SelectSingleNode(
-                $"/doc/members/member[@name='{methodMemberName}']/param[@name='{context.ParameterInfo.Name}']");
+
+            if (!_docMembers.TryGetValue(methodMemberName, out var propertyNode)) return;
+
+            var paramNode = propertyNode.SelectSingleNode($"/param[@name='{context.ParameterInfo.Name}']");
 
             if (paramNode != null)
             {
