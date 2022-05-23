@@ -36,8 +36,6 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             if (!_docMembers.TryGetValue(propertyMemberName, out var propertyNode)) return;
 
-            if (propertyNode == null) return;
-
             var summaryNode = propertyNode.SelectSingleNode("summary");
             if (summaryNode != null)
             {
