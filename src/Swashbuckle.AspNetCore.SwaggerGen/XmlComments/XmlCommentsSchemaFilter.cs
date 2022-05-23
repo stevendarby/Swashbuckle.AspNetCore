@@ -23,10 +23,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             }
         }
 
-        private void ApplyTypeTags(OpenApiSchema schema, Type type)
+         private void ApplyTypeTags(OpenApiSchema schema, Type type)
         {
             var typeMemberName = XmlCommentsNodeNameHelper.GetMemberNameForType(type);
-            var typeSummaryNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{typeMemberName}']/summary");
+
+            if (!_docMembers.TryGetValue(typeMemberName, out var memberNode)) return;
+
+            var typeSummaryNode = memberNode.SelectSingleNode("summary");
 
             if (typeSummaryNode != null)
             {
