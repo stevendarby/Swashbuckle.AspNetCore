@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Xml.XPath;
 using Microsoft.OpenApi.Models;
 
@@ -6,17 +6,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public class XmlCommentsSchemaFilter : ISchemaFilter
     {
-        private readonly Dictionary<string, XPathNavigator> _docMembers;
+        private readonly XPathNavigator _xmlNavigator;
 
-        public TribalXmlCommentsSchemaFilter(XPathDocument xmlDoc)
+        public XmlCommentsSchemaFilter(XPathDocument xmlDoc)
         {
-            var xmlNavigator = xmlDoc.CreateNavigator();
-            _docMembers = new Dictionary<string, XPathNavigator>();
-            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
-            {
-                var memberName = memberNode.GetAttribute("name", "");
-                _docMembers[memberName] = memberNode;
-            }
+            _xmlNavigator = xmlDoc.CreateNavigator();
         }
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
@@ -32,7 +26,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private void ApplyTypeTags(OpenApiSchema schema, Type type)
         {
             var typeMemberName = XmlCommentsNodeNameHelper.GetMemberNameForType(type);
-            var typeSummaryNode = _docMembers.TryGetValue(typeMemberName, out var result) ? result.SelectSingleNode("summary") : null;
+            var typeSummaryNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{typeMemberName}']/summary");
 
             if (typeSummaryNode != null)
             {
@@ -43,8 +37,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private void ApplyMemberTags(OpenApiSchema schema, SchemaFilterContext context)
         {
             var fieldOrPropertyMemberName = XmlCommentsNodeNameHelper.GetMemberNameForFieldOrProperty(context.MemberInfo);
+            var fieldOrPropertyNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{fieldOrPropertyMemberName}']");
 
-            if (!_docMembers.TryGetValue(fieldOrPropertyMemberName, out var fieldOrPropertyNode)) return;
+            if (fieldOrPropertyNode == null) return;
 
             var summaryNode = fieldOrPropertyNode.SelectSingleNode("summary");
             if (summaryNode != null)
