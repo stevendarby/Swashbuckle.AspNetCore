@@ -41,10 +41,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             if (!_docMembers.TryGetValue(typeMemberName, out var methodNode)) return;
 
             var responseNodes = methodNode.Select("response");
-            if (responseNodes != null)
-            {
-                ApplyResponseTags(operation, responseNodes);
-            }
+            ApplyResponseTags(operation, responseNodes);
         }
 
         private void ApplyMethodTags(OpenApiOperation operation, MethodInfo methodInfo)
