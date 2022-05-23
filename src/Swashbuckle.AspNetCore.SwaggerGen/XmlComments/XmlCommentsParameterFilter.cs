@@ -68,7 +68,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             if (!_docMembers.TryGetValue(methodMemberName, out var propertyNode)) return;
 
-            var paramNode = propertyNode.SelectSingleNode($"/param[@name='{context.ParameterInfo.Name}']");
+            var paramNode = propertyNode.SelectSingleNode($"param[@name='{context.ParameterInfo.Name}']");
 
             if (paramNode != null)
             {
