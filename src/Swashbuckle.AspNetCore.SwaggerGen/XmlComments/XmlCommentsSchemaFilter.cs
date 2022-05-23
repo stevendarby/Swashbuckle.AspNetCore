@@ -6,11 +6,17 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public class XmlCommentsSchemaFilter : ISchemaFilter
     {
-        private readonly XPathNavigator _xmlNavigator;
+        private readonly Dictionary<string, XPathNavigator> _docMembers;
 
-        public XmlCommentsSchemaFilter(XPathDocument xmlDoc)
+        public TribalXmlCommentsSchemaFilter(XPathDocument xmlDoc)
         {
-            _xmlNavigator = xmlDoc.CreateNavigator();
+            var xmlNavigator = xmlDoc.CreateNavigator();
+            _docMembers = new Dictionary<string, XPathNavigator>();
+            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
+            {
+                var memberName = memberNode.GetAttribute("name", "");
+                _docMembers[memberName] = memberNode;
+            }
         }
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
@@ -26,7 +32,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private void ApplyTypeTags(OpenApiSchema schema, Type type)
         {
             var typeMemberName = XmlCommentsNodeNameHelper.GetMemberNameForType(type);
-            var typeSummaryNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{typeMemberName}']/summary");
+            var typeSummaryNode = _docMembers.TryGetValue(typeMemberName, out var result) ? result.SelectSingleNode("summary") : null;
 
             if (typeSummaryNode != null)
             {
@@ -37,9 +43,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private void ApplyMemberTags(OpenApiSchema schema, SchemaFilterContext context)
         {
             var fieldOrPropertyMemberName = XmlCommentsNodeNameHelper.GetMemberNameForFieldOrProperty(context.MemberInfo);
-            var fieldOrPropertyNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{fieldOrPropertyMemberName}']");
 
-            if (fieldOrPropertyNode == null) return;
+            if (!_docMembers.TryGetValue(fieldOrPropertyMemberName, out var fieldOrPropertyNode)) return;
 
             var summaryNode = fieldOrPropertyNode.SelectSingleNode("summary");
             if (summaryNode != null)
