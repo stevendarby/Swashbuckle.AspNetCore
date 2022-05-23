@@ -7,11 +7,16 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public class XmlCommentsOperationFilter : IOperationFilter
     {
-        private readonly XPathNavigator _xmlNavigator;
+        private readonly Dictionary<string, XPathNavigator> _docMembers;
 
         public XmlCommentsOperationFilter(XPathDocument xmlDoc)
         {
-            _xmlNavigator = xmlDoc.CreateNavigator();
+            _docMembers = new Dictionary<string, XPathNavigator>();
+            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
+            {
+                var memberName = memberNode.GetAttribute("name", "");
+                _docMembers[memberName] = memberNode;
+            }
         }
 
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
@@ -32,22 +37,27 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private void ApplyControllerTags(OpenApiOperation operation, Type controllerType)
         {
             var typeMemberName = XmlCommentsNodeNameHelper.GetMemberNameForType(controllerType);
-            var responseNodes = _xmlNavigator.Select($"/doc/members/member[@name='{typeMemberName}']/response");
-            ApplyResponseTags(operation, responseNodes);
+
+            if (!_docMembers.TryGetValue(typeMemberName, out var methodNode)) return;
+
+            var responseNodes = methodNode.Select("response");
+            if (responseNodes != null)
+            {
+                ApplyResponseTags(operation, responseNodes);
+            }
         }
 
         private void ApplyMethodTags(OpenApiOperation operation, MethodInfo methodInfo)
         {
             var methodMemberName = XmlCommentsNodeNameHelper.GetMemberNameForMethod(methodInfo);
-            var methodNode = _xmlNavigator.SelectSingleNode($"/doc/members/member[@name='{methodMemberName}']");
 
-            if (methodNode == null) return;
+            if (!_docMembers.TryGetValue(methodMemberName, out var methodNode)) return;
 
             var summaryNode = methodNode.SelectSingleNode("summary");
             if (summaryNode != null)
                 operation.Summary = XmlCommentsTextHelper.Humanize(summaryNode.InnerXml);
 
-            var remarksNode = methodNode.SelectSingleNode("remarks");
+            var remarksNode = methodNode.SelectSingleNode("summary");
             if (remarksNode != null)
                 operation.Description = XmlCommentsTextHelper.Humanize(remarksNode.InnerXml);
 
@@ -65,6 +75,64 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     : operation.Responses[code] = new OpenApiResponse();
 
                 response.Description = XmlCommentsTextHelper.Humanize(responseNodes.Current.InnerXml);
+            }
+        }
+    }
+
+    internal class TribalXmlCommentsSchemaFilter : ISchemaFilter
+    {
+        private readonly Dictionary<string, XPathNavigator> _docMembers;
+
+        public TribalXmlCommentsSchemaFilter(XPathDocument xmlDoc)
+        {
+            var xmlNavigator = xmlDoc.CreateNavigator();
+            _docMembers = new Dictionary<string, XPathNavigator>();
+            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
+            {
+                var memberName = memberNode.GetAttribute("name", "");
+                _docMembers[memberName] = memberNode;
+            }
+        }
+
+        public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+        {
+            ApplyTypeTags(schema, context.Type);
+
+            if (context.MemberInfo != null)
+            {
+                ApplyMemberTags(schema, context);
+            }
+        }
+
+        private void ApplyTypeTags(OpenApiSchema schema, Type type)
+        {
+            var typeMemberName = XmlCommentsNodeNameHelper.GetMemberNameForType(type);
+            var typeSummaryNode = _docMembers.TryGetValue(typeMemberName, out var result) ? result.SelectSingleNode("summary") : null;
+
+            if (typeSummaryNode != null)
+            {
+                schema.Description = XmlCommentsTextHelper.Humanize(typeSummaryNode.InnerXml);
+            }
+        }
+
+        private void ApplyMemberTags(OpenApiSchema schema, SchemaFilterContext context)
+        {
+            var fieldOrPropertyMemberName = XmlCommentsNodeNameHelper.GetMemberNameForFieldOrProperty(context.MemberInfo);
+
+            if (!_docMembers.TryGetValue(fieldOrPropertyMemberName, out var fieldOrPropertyNode)) return;
+
+            var summaryNode = fieldOrPropertyNode.SelectSingleNode("summary");
+            if (summaryNode != null)
+                schema.Description = XmlCommentsTextHelper.Humanize(summaryNode.InnerXml);
+
+            var exampleNode = fieldOrPropertyNode.SelectSingleNode("example");
+            if (exampleNode != null)
+            {
+                var exampleAsJson = (schema.ResolveType(context.SchemaRepository) == "string") && !exampleNode.Value.Equals("null")
+                    ? $"\"{exampleNode.ToString()}\""
+                    : exampleNode.ToString();
+
+                schema.Example = OpenApiAnyFactory.CreateFromJson(exampleAsJson);
             }
         }
     }
