@@ -35,6 +35,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             if (parameterInfo != null)
             {
                 ApplyParamTags(requestBody, context, parameterInfo);
+                return;
             }
         }
 
