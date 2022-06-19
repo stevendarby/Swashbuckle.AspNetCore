@@ -27,7 +27,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var propertyInfo = bodyParameterDescription.PropertyInfo();
             if (propertyInfo != null)
             {
-                ApplyPropertyTags(requestBody, context, propertyInfo); return;
+                ApplyPropertyTags(requestBody, context, propertyInfo);
+                return;
             }
 
             var parameterInfo = bodyParameterDescription.ParameterInfo();
@@ -37,7 +38,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             }
         }
 
-        private void ApplyPropertyTags(OpenApiRequestBody requestBody, RequestBodyFilterContext context, MemberInfo propertyInfo)
+        private void ApplyPropertyTags(OpenApiRequestBody requestBody, RequestBodyFilterContext context, PropertyInfo propertyInfo)
         {
             var propertyMemberName = XmlCommentsNodeNameHelper.GetMemberNameForFieldOrProperty(propertyInfo);
 
@@ -62,8 +63,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
         private void ApplyParamTags(OpenApiRequestBody requestBody, RequestBodyFilterContext context, ParameterInfo parameterInfo)
         {
-            if (!(parameterInfo.Member is MethodInfo methodInfo))
-                return;
+            if (!(parameterInfo.Member is MethodInfo methodInfo)) return;
 
             // If method is from a constructed generic type, look for comments from the generic type method
             var targetMethod = methodInfo.DeclaringType.IsConstructedGenericType
