@@ -1,6 +1,9 @@
-﻿using System.Reflection;
-using System.Xml.XPath;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Xml.XPath;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
@@ -10,12 +13,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
         public XmlCommentsParameterFilter(XPathDocument xmlDoc)
         {
-            _docMembers = new Dictionary<string, XPathNavigator>();
-            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
-            {
-                var memberName = memberNode.GetAttribute("name", "");
-                _docMembers[memberName] = memberNode;
-            }
+            _docMembers = xmlDoc.CreateNavigator()
+                .Select("/doc/members/member")
+                .OfType<XPathNavigator>()
+                .ToDictionary(memberNode => memberNode.GetAttribute("name", ""));
         }
 
         public void Apply(OpenApiParameter parameter, ParameterFilterContext context)
