@@ -1,6 +1,8 @@
-using System;
-using System.Xml.XPath;
 using Microsoft.OpenApi.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.XPath;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
@@ -10,7 +12,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
         public XmlCommentsSchemaFilter(XPathDocument xmlDoc)
         {
-            _xmlNavigator = xmlDoc.CreateNavigator();
+            _docMembers = xmlDoc.CreateNavigator()
+                .Select("/doc/members/member")
+                .OfType<XPathNavigator>()
+                .ToDictionary(memberNode => memberNode.GetAttribute("name", ""));
         }
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
@@ -23,7 +28,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             }
         }
 
-         private void ApplyTypeTags(OpenApiSchema schema, Type type)
+        private void ApplyTypeTags(OpenApiSchema schema, Type type)
         {
             var typeMemberName = XmlCommentsNodeNameHelper.GetMemberNameForType(type);
 
@@ -51,7 +56,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var exampleNode = fieldOrPropertyNode.SelectSingleNode("example");
             if (exampleNode != null)
             {
-                var exampleAsJson = (schema.ResolveType(context.SchemaRepository) == "string") && !exampleNode.Value.Equals("null")
+                var exampleAsJson = (schema.ResolveType(context.SchemaRepository) == "string") && !exampleNode.Value.Equals("null", StringComparison.Ordinal)
                     ? $"\"{exampleNode.ToString()}\""
                     : exampleNode.ToString();
 
