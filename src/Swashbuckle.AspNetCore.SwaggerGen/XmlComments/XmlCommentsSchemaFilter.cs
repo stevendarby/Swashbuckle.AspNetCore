@@ -56,7 +56,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var exampleNode = fieldOrPropertyNode.SelectSingleNode("example");
             if (exampleNode != null)
             {
-                var exampleAsJson = (schema.ResolveType(context.SchemaRepository) == "string") && !exampleNode.Value.Equals("null", StringComparison.Ordinal)
+                var exampleAsJson = (schema.ResolveType(context.SchemaRepository) == "string") && !exampleNode.Value.Equals("null")
                     ? $"\"{exampleNode.ToString()}\""
                     : exampleNode.ToString();
 
