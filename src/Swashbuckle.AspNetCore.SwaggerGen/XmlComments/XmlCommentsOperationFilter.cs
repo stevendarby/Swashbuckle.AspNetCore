@@ -1,22 +1,23 @@
-﻿using System;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Xml.XPath;
-using Microsoft.OpenApi.Models;
 
-namespace Swashbuckle.AspNetCore.SwaggerGen
+namespace Tribal.Edge.Core.MultiTenancy.Http.Filters
 {
-    public class XmlCommentsOperationFilter : IOperationFilter
+    internal class TribalXmlCommentsOperationFilter : IOperationFilter
     {
         private readonly Dictionary<string, XPathNavigator> _docMembers;
 
-        public XmlCommentsOperationFilter(XPathDocument xmlDoc)
+        public TribalXmlCommentsOperationFilter(XPathDocument xmlDoc)
         {
-            _docMembers = new Dictionary<string, XPathNavigator>();
-            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
-            {
-                var memberName = memberNode.GetAttribute("name", "");
-                _docMembers[memberName] = memberNode;
-            }
+            _docMembers = xmlDoc.CreateNavigator()
+                .Select("/doc/members/member")
+                .OfType<XPathNavigator>()
+                .ToDictionary(memberNode => memberNode.GetAttribute("name", ""));
         }
 
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
@@ -67,9 +68,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             while (responseNodes.MoveNext())
             {
                 var code = responseNodes.Current.GetAttribute("code", "");
-                var response = operation.Responses.ContainsKey(code)
-                    ? operation.Responses[code]
-                    : operation.Responses[code] = new OpenApiResponse();
+                if (!operation.Responses.TryGetValue(code, out var response))
+                {
+                    response = new OpenApiResponse();
+                    operation.Responses[code] = response;
+                }
 
                 response.Description = XmlCommentsTextHelper.Humanize(responseNodes.Current.InnerXml);
             }
