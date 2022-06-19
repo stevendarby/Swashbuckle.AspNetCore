@@ -1,6 +1,8 @@
-﻿using System.Reflection;
-using System.Xml.XPath;
 using Microsoft.OpenApi.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Xml.XPath;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
@@ -10,12 +12,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
         public XmlCommentsRequestBodyFilter(XPathDocument xmlDoc)
         {
-            _docMembers = new Dictionary<string, XPathNavigator>();
-            foreach (XPathNavigator memberNode in xmlDoc.CreateNavigator().Select("/doc/members/member"))
-            {
-                var memberName = memberNode.GetAttribute("name", "");
-                _docMembers[memberName] = memberNode;
-            }
+            _docMembers = xmlDoc.CreateNavigator()
+                .Select("/doc/members/member")
+                .OfType<XPathNavigator>()
+                .ToDictionary(memberNode => memberNode.GetAttribute("name", ""));
         }
 
         public void Apply(OpenApiRequestBody requestBody, RequestBodyFilterContext context)
@@ -27,19 +27,17 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var propertyInfo = bodyParameterDescription.PropertyInfo();
             if (propertyInfo != null)
             {
-                ApplyPropertyTags(requestBody, context, propertyInfo);
-                return;
+                ApplyPropertyTags(requestBody, context, propertyInfo); return;
             }
 
             var parameterInfo = bodyParameterDescription.ParameterInfo();
             if (parameterInfo != null)
             {
                 ApplyParamTags(requestBody, context, parameterInfo);
-                return;
             }
         }
 
-        private void ApplyPropertyTags(OpenApiRequestBody requestBody, RequestBodyFilterContext context, PropertyInfo propertyInfo)
+        private void ApplyPropertyTags(OpenApiRequestBody requestBody, RequestBodyFilterContext context, MemberInfo propertyInfo)
         {
             var propertyMemberName = XmlCommentsNodeNameHelper.GetMemberNameForFieldOrProperty(propertyInfo);
 
@@ -64,7 +62,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
         private void ApplyParamTags(OpenApiRequestBody requestBody, RequestBodyFilterContext context, ParameterInfo parameterInfo)
         {
-            if (!(parameterInfo.Member is MethodInfo methodInfo)) return;
+            if (!(parameterInfo.Member is MethodInfo methodInfo))
+                return;
 
             // If method is from a constructed generic type, look for comments from the generic type method
             var targetMethod = methodInfo.DeclaringType.IsConstructedGenericType
@@ -96,4 +95,5 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 }
             }
         }
+    }
 }
