@@ -6,9 +6,9 @@ using System.Linq;
 using System.Reflection;
 using System.Xml.XPath;
 
-namespace Tribal.Edge.Core.MultiTenancy.Http.Filters
+namespace Swashbuckle.AspNetCore.SwaggerGen
 {
-    internal class TribalXmlCommentsOperationFilter : IOperationFilter
+    public class XmlCommentsOperationFilter : IOperationFilter
     {
         private readonly Dictionary<string, XPathNavigator> _docMembers;
 
