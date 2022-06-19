@@ -12,7 +12,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
     {
         private readonly Dictionary<string, XPathNavigator> _docMembers;
 
-        public TribalXmlCommentsOperationFilter(XPathDocument xmlDoc)
+        public XmlCommentsOperationFilter(XPathDocument xmlDoc)
         {
             _docMembers = xmlDoc.CreateNavigator()
                 .Select("/doc/members/member")
